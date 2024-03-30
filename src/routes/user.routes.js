@@ -2,7 +2,12 @@ const express = require("express");
 const router = express.Router();
 
 const Upload = require("../middlewares/multer.middleware");
-const { registrationUser } = require("../controllers/user.controller");
+const {
+  registrationUser,
+  loginUser,
+  LogoutUser,
+} = require("../controllers/user.controller");
+const authMiddlware = require("../middlewares/auth.middleware");
 
 router.route("/registration").post(
   Upload.fields([
@@ -17,5 +22,7 @@ router.route("/registration").post(
   ]),
   registrationUser
 );
+router.route("/login").post(loginUser);
+router.route("/logout").get(authMiddlware, LogoutUser);
 
 module.exports = router;
