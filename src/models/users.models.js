@@ -7,9 +7,6 @@ const userSchema = new mongoose.Schema(
     username: {
       type: String,
       required: true,
-      trim: true,
-      unique: true,
-      index: true,
     },
     email: {
       type: String,
@@ -31,7 +28,6 @@ const userSchema = new mongoose.Schema(
     },
     refreshToken: {
       type: String,
-      required: true,
     },
     watchHistory: [
       {
@@ -48,11 +44,10 @@ const userSchema = new mongoose.Schema(
 userSchema.pre("save", async function (next) {
   if (!this.isModified("password")) {
     next();
-  } else {
-    const salt = await bcrypt.genSalt(10);
-    this.password = bcrypt.hash(this.password, salt);
-    next();
   }
+  const salt = await bcrypt.genSalt(10);
+  this.password = await bcrypt.hash(this.password, salt);
+  next();
 });
 
 userSchema.methods.isPasswordMatch = async function (enteredPassword) {
@@ -72,4 +67,4 @@ userSchema.methods.generateRefreshToken = function () {
   });
 };
 
-export const User = mongoose.Model("User", userSchema);
+module.exports = mongoose.model("User", userSchema);

@@ -8,6 +8,8 @@ const storage = multer.diskStorage({
   },
 });
 
-export const upload = multer({
+const Upload = multer({
   storage: storage,
 });
+
+module.exports = Upload;
