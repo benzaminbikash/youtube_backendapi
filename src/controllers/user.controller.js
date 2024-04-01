@@ -96,8 +96,11 @@ const LogoutUser = asyncHandler(async (req, res) => {
   await User.findByIdAndUpdate(
     req.user?._id,
     {
-      $set: {
-        refreshToken: null,
+      // $set: {
+      //   refreshToken: null,
+      // },
+      $unset: {
+        refreshToken: 1, // this will help to remove refreshToken field from document
       },
     },
     { new: true }
@@ -118,7 +121,7 @@ const refreshTokenHandler = asyncHandler(async (req, res) => {
   if (!incomingToken) throw new ApiError("Not authorized", 400);
   try {
     const check = jwt.verify(incomingToken, process.env.REFRESH_TOKEN);
-    const user = await User.findById(check._id);
+    const user = await User.findById(check?._id);
     if (!user) throw new Error("Invalid refresh token", 401);
     if (incomingToken != user?.refreshToken)
       throw new Error("Refresh token is expired", 401);
@@ -126,23 +129,40 @@ const refreshTokenHandler = asyncHandler(async (req, res) => {
       httpOnly: true,
       secure: true,
     };
-    const { accesstoken, newreshtoken } = await generateAccessandRefreshToken(
+    const { accesstoken, refreshtoken } = await generateAccessandRefreshToken(
       user._id
     );
     res
       .status(200)
       .cookie("accessToken", accesstoken, option)
-      .cookie("refreshToken", newreshtoken, option)
+      .cookie("refreshToken", refreshtoken, option)
       .json(
         new ApiResponse(
           200,
-          { accesstoken, refreshtoken: newreshtoken },
+          { accesstoken, refreshtoken },
           "Access token refresh"
         )
       );
   } catch (error) {
     console.log(error);
+    throw new ApiError(error?.message, 400);
   }
+});
+
+const changePassword = asyncHandler(async (req, res) => {
+  const { oldPassword, newPassword, confirmationPassword } = req.body;
+  if (!oldPassword || !newPassword || !confirmationPassword)
+    throw new Error("All fields are required.");
+  const _id = req.user._id;
+  const user = await User.findById(_id);
+  if (!user) throw new Error("User is not authenticated.", 401);
+  const checkoldPassword = await user.isPasswordMatch(oldPassword);
+  if (!checkoldPassword) throw new Error("Old password is not correct!");
+  if (newPassword != confirmationPassword)
+    throw new Error("New Password and Confirmation Password are not match.");
+  user.password = newPassword;
+  user.save();
+  res.status(200).json(new ApiResponse(200, "Password Change Successfully!"));
 });
 
 module.exports = {
@@ -150,4 +170,5 @@ module.exports = {
   loginUser,
   LogoutUser,
   refreshTokenHandler,
+  changePassword,
 };
