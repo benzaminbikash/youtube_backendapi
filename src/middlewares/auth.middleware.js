@@ -8,7 +8,6 @@ const authMiddlware = asyncHandler(async (req, res, next) => {
     const token =
       req.cookies?.accessToken ||
       req.header("Authorization")?.replace("Bearer ", "");
-    console.log(token);
     if (!token) throw new ApiError("Unauthorized request", 400);
     const { _id } = jwt.verify(token, process.env.ACCESS_TOKEN);
     const user = await User.findById(_id).select("-password -refreshToken");

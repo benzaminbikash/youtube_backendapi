@@ -144,7 +144,6 @@ const refreshTokenHandler = asyncHandler(async (req, res) => {
         )
       );
   } catch (error) {
-    console.log(error);
     throw new ApiError(error?.message, 400);
   }
 });
@@ -162,7 +161,60 @@ const changePassword = asyncHandler(async (req, res) => {
     throw new Error("New Password and Confirmation Password are not match.");
   user.password = newPassword;
   user.save();
-  res.status(200).json(new ApiResponse(200, "Password Change Successfully!"));
+  res
+    .status(200)
+    .json(new ApiResponse(200, {}, "Password Change Successfully!"));
+});
+
+const getCurrentUser = asyncHandler(async (req, res) => {
+  const currentUser = await User.findById(req.user?._id).select(
+    "-password -refreshToken"
+  );
+  if (!currentUser) throw new Error("No token available", 400);
+  res
+    .status(200)
+    .json(new ApiResponse(200, { currentUser }, "Current User Information"));
+});
+
+const updateUserDetails = asyncHandler(async (req, res) => {
+  const { _id } = req.user;
+  const user = await User.findById(_id);
+  if (req.files) {
+    let avatarPath;
+    if (Array.isArray(req.files.avatar) && req.files.avatar.length > 0) {
+      avatarPath = req.files?.avatar[0].path;
+    }
+
+    const coverPath = req.files?.coverimage[0].path;
+
+    const a = await uploadOnCloudinary(avatarPath);
+    const c = await uploadOnCloudinary(coverPath);
+
+    const updateInfo = await User.findByIdAndUpdate(
+      _id,
+      {
+        ...req.body,
+        avatar: a?.url || user?.avatar,
+        coverimage: c?.url || user?.coverimage,
+      },
+      {
+        new: true,
+      }
+    ).select("-password");
+    res
+      .status(200)
+      .json(
+        new ApiResponse(200, { updateInfo }, "Update User Detail Successfully")
+      );
+  }
+  const updateInfo = await User.findByIdAndUpdate(_id, req.body, {
+    new: true,
+  }).select("-password");
+  res
+    .status(200)
+    .json(
+      new ApiResponse(200, { updateInfo }, "Update User Detail Successfully")
+    );
 });
 
 module.exports = {
@@ -171,4 +223,6 @@ module.exports = {
   LogoutUser,
   refreshTokenHandler,
   changePassword,
+  getCurrentUser,
+  updateUserDetails,
 };
