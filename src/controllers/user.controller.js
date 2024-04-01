@@ -2,7 +2,7 @@ const ApiError = require("../utils/ApiError");
 const User = require("../models/users.models");
 const { asyncHandler } = require("../utils/asyncHandler");
 const uploadOnCloudinary = require("../utils/cloudinary");
-const fs = require("fs");
+const jwt = require("jsonwebtoken");
 const ApiResponse = require("../utils/ApiResponse");
 
 const registrationUser = asyncHandler(async (req, res) => {
@@ -113,4 +113,41 @@ const LogoutUser = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, {}, "Logout User"));
 });
 
-module.exports = { registrationUser, loginUser, LogoutUser };
+const refreshTokenHandler = asyncHandler(async (req, res) => {
+  const incomingToken = req.cookies.refreshToken || req.body.refreshToken;
+  if (!incomingToken) throw new ApiError("Not authorized", 400);
+  try {
+    const check = jwt.verify(incomingToken, process.env.REFRESH_TOKEN);
+    const user = await User.findById(check._id);
+    if (!user) throw new Error("Invalid refresh token", 401);
+    if (incomingToken != user?.refreshToken)
+      throw new Error("Refresh token is expired", 401);
+    const option = {
+      httpOnly: true,
+      secure: true,
+    };
+    const { accesstoken, newreshtoken } = await generateAccessandRefreshToken(
+      user._id
+    );
+    res
+      .status(200)
+      .cookie("accessToken", accesstoken, option)
+      .cookie("refreshToken", newreshtoken, option)
+      .json(
+        new ApiResponse(
+          200,
+          { accesstoken, refreshtoken: newreshtoken },
+          "Access token refresh"
+        )
+      );
+  } catch (error) {
+    console.log(error);
+  }
+});
+
+module.exports = {
+  registrationUser,
+  loginUser,
+  LogoutUser,
+  refreshTokenHandler,
+};

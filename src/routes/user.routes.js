@@ -6,6 +6,7 @@ const {
   registrationUser,
   loginUser,
   LogoutUser,
+  refreshTokenHandler,
 } = require("../controllers/user.controller");
 const authMiddlware = require("../middlewares/auth.middleware");
 
@@ -24,5 +25,6 @@ router.route("/registration").post(
 );
 router.route("/login").post(loginUser);
 router.route("/logout").get(authMiddlware, LogoutUser);
+router.route("/refreshtoken").get(refreshTokenHandler);
 
 module.exports = router;
